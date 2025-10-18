@@ -105,8 +105,10 @@
         setButtonLoading(true);
 
         try {
-            // IDトークンの取得
+            // IDトークンとLINEプロファイルを取得
             const idToken = liff.getIDToken();
+            const profile = await liff.getProfile();
+            
             if (!idToken) {
                 throw new Error("IDトークンが取得できませんでした。");
             }
@@ -120,7 +122,8 @@
                 },
                 body: JSON.stringify({ 
                     idToken: idToken,
-                    userName: userName 
+                    userName: userName, // ユーザーが入力した氏名
+                    displayName: profile.displayName // LINEの表示名
                 })
             });
 
@@ -176,3 +179,4 @@
 </script>
 </body>
 </html>
+
