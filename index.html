@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仁サロン 登録フォーム</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>登録フォームへリダイレクト中...</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* 簡単なスピナーアニメーション */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+        }
         .loader {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border-top: 4px solid #00B900; /* LINE Green */
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -22,161 +30,57 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <div id="app" class="container mx-auto p-4 max-w-md">
-
-        <!-- ローディング画面 -->
-        <div id="loading" class="flex flex-col items-center justify-center h-screen">
-            <div class="loader"></div>
-            <p class="mt-4 text-gray-600">読み込み中...</p>
-        </div>
-
-        <!-- メインコンテンツ -->
-        <div id="main-content" class="hidden">
-            <div class="bg-white p-6 rounded-lg shadow-lg">
-                <h1 class="text-2xl font-bold mb-2 text-center text-gray-800">仁サロン 登録フォーム</h1>
-                <p class="text-center text-gray-500 mb-6">ようこそ、<span id="displayName" class="font-semibold">ゲスト</span>さん</p>
-                
-                <form id="registration-form">
-                    <div class="mb-4">
-                        <label for="userName" class="block text-gray-700 text-sm font-bold mb-2">氏名</label>
-                        <input type="text" id="userName" name="userName" required class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="例：山田 太郎">
-                    </div>
-                    <button type="submit" id="submit-button" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 flex items-center justify-center">
-                        <span id="button-text">登録する</span>
-                        <div id="button-spinner" class="loader !w-5 !h-5 !border-2 !border-t-white hidden"></div>
-                    </button>
-                </form>
-            </div>
-            
-            <!-- メッセージ表示エリア -->
-            <div id="message-area" class="mt-4 text-center"></div>
-        </div>
+<body>
+    <div>
+        <div class="loader" style="margin: 0 auto;"></div>
+        <p>情報を読み込んでいます...</p>
     </div>
 
 <script>
-    // --- 設定項目 ---
+    // --- ① 基本設定 ---
     const LIFF_ID = "1657635807-gXxYBOwN";
-    // READMEの手順に従って、GASをデプロイして取得したURLに書き換えてください
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxjckyJCUyiTnOmchaBKG-YIik2zqiIUezAtCGwcN4VdH3o-3oKlz9V9fYkT2d7nvmr/exec"; 
+    const LARK_FORM_BASE_URL = "https://bjplm1vnnisz.jp.larksuite.com/share/base/form/shrjpXkRWeALIFXsWfQMwtndOyW";
+
+    // --- ② Larkフォームのパラメータ設定 ---
+    // ★重要：Larkの仕様に合わせて、ここの名前を調整する必要があるかもしれません。
+    // Larkフォームの「LINEユーザーID」という項目に対応するパラメータ名
+    const PARAM_NAME_FOR_USER_ID = "prefill_LINEユーザーID";
+    // Larkフォームの「LINE表示名」という項目に対応するパラメータ名
+    const PARAM_NAME_FOR_DISPLAY_NAME = "prefill_LINE表示名";
     // --- 設定はここまで ---
 
-    document.addEventListener("DOMContentLoaded", () => {
-        main();
-    });
 
     async function main() {
         try {
-            // LIFFの初期化
             await liff.init({ liffId: LIFF_ID });
 
             if (!liff.isLoggedIn()) {
-                // ログインしていない場合はログインを促す
-                showMessage("LINEログインが必要です。", "error");
                 liff.login();
-                return;
+                return; // ログイン後、このページが再読み込みされる
             }
-            
-            // ユーザープロファイルの取得と表示
-            const profile = await liff.getProfile();
-            document.getElementById("displayName").textContent = profile.displayName;
 
-            // ローディング画面を非表示にし、メインコンテンツを表示
-            document.getElementById("loading").classList.add("hidden");
-            document.getElementById("main-content").classList.remove("hidden");
+            // LINEのプロフィール情報を取得
+            const profile = await liff.getProfile();
+            const userId = profile.userId;
+            const displayName = profile.displayName;
+
+            // Larkフォームに渡すためのURLを作成
+            const params = new URLSearchParams();
+            params.append(PARAM_NAME_FOR_USER_ID, userId);
+            params.append(PARAM_NAME_FOR_DISPLAY_NAME, displayName);
+            
+            const redirectUrl = `${LARK_FORM_BASE_URL}?${params.toString()}`;
+
+            // 作成したURLにリダイレクト
+            window.location.href = redirectUrl;
 
         } catch (error) {
-            console.error("LIFF Initialization failed", error);
-            showMessage("LIFFの初期化に失敗しました。画面を再読み込みしてください。", "error");
+            console.error("Error during LIFF processing:", error);
+            document.body.innerHTML = "エラーが発生しました。LIFFアプリを再度開いてください。";
         }
     }
 
-    const form = document.getElementById("registration-form");
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const userName = document.getElementById("userName").value;
-        if (!userName) {
-            showMessage("氏名を入力してください。", "error");
-            return;
-        }
-
-        // ボタンをローディング状態にする
-        setButtonLoading(true);
-
-        try {
-            // IDトークンとLINEプロファイルを取得
-            const idToken = liff.getIDToken();
-            const profile = await liff.getProfile();
-            
-            if (!idToken) {
-                throw new Error("IDトークンが取得できませんでした。");
-            }
-            
-            // GASにデータを送信
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors', // GAS Web AppへのPOSTはCORSエラーを避けるため no-cors モードで実行
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8', // Content-Typeは text/plain でないとGASが受け付けない
-                },
-                body: JSON.stringify({ 
-                    idToken: idToken,
-                    userName: userName, // ユーザーが入力した氏名
-                    displayName: profile.displayName // LINEの表示名
-                })
-            });
-
-            // no-corsモードではレスポンスの中身を読めないが、リクエストが成功したと見なす
-            showMessage("登録が完了しました！ありがとうございます。", "success");
-
-            // 1.5秒後にLIFFを閉じる
-            setTimeout(() => {
-                liff.closeWindow();
-            }, 1500);
-
-        } catch (error) {
-            console.error("Registration failed:", error);
-            showMessage(`登録に失敗しました: ${error.message}`, "error");
-        } finally {
-            // ボタンのローディング状態を解除
-            setButtonLoading(false);
-        }
-    });
-
-    // メッセージ表示用のヘルパー関数
-    function showMessage(text, type) {
-        const messageArea = document.getElementById("message-area");
-        messageArea.textContent = text;
-        if (type === "success") {
-            messageArea.className = "mt-4 text-center text-green-600 font-semibold";
-        } else if (type === "error") {
-            messageArea.className = "mt-4 text-center text-red-600 font-semibold";
-        } else {
-             messageArea.className = "mt-4 text-center text-gray-600";
-        }
-    }
-
-    // ボタンのローディング状態を切り替える関数
-    function setButtonLoading(isLoading) {
-        const buttonText = document.getElementById("button-text");
-        const buttonSpinner = document.getElementById("button-spinner");
-        const submitButton = document.getElementById("submit-button");
-
-        if (isLoading) {
-            buttonText.classList.add("hidden");
-            buttonSpinner.classList.remove("hidden");
-            submitButton.disabled = true;
-            submitButton.classList.add("opacity-50", "cursor-not-allowed");
-        } else {
-            buttonText.classList.remove("hidden");
-            buttonSpinner.classList.add("hidden");
-            submitButton.disabled = false;
-            submitButton.classList.remove("opacity-50", "cursor-not-allowed");
-        }
-    }
-
+    main();
 </script>
 </body>
 </html>
-
